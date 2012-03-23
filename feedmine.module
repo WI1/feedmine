@@ -1,0 +1,250 @@
+<?php
+
+// $Id: feedmine.module,v 1.1.4.1 2009/05/24 19:28:35 dougkress Exp $
+
+/*
+ * @file
+ * The Feedmine module provides Drupal Blocks for users to enter comments
+ * which are inserted directly into the specified Redmine database.
+ *
+ * To configure, go to admin/settings/feedmine and set up your Redmine
+ * database.
+ *
+ * For more information on Redmine, please go to http://www.redmine.org
+ *
+ */
+function feedmine_menu() {
+  $items = array();
+
+  $items['admin/settings/feedmine'] = array(
+      'title' => 'Feedmine',
+      'description' => 'Feedmine / redmine integration settings',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('feedmine_settings_form'),
+      'access arguments' => array('feedmine settings'),
+      'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+function feedmine_perm() {
+  return array('feedmine settings');
+}
+
+function feedmine_get_list($entity, $label = 'name', $where = NULL) {
+  // Split where clause into where key and value
+  $splits = explode(" = ", $where);
+  $key = $splits[0];
+  $value = $splits[1];
+  $issues = redmine_rest_api_issues();
+  $list = array();
+  foreach ($issues as $issueId => $issue) {
+    if ($issue[$key] == $value) {
+      $list[$issueId] = $issue[$entity];
+    }
+  }
+  return $list;
+}
+
+
+function feedmine_settings_form() {
+  $form = array();
+
+  $form['message'] = array('#value' => 'Feedmine as been configured to use Redmine API');
+  $projects = redmine_rest_api_projects(array('limit' => '200'));
+  $projects_options = array();
+  foreach ($projects as $project) {
+    $projects_options[$project->id] = $project->name;
+  }
+  $project_id = variable_get('redmine_project_id', 0);
+  $form['redmine_project_id'] = array(
+      '#type' => 'select',
+      '#title' => t('Redmine project'),
+      '#options' => $projects_options,
+      '#default_value' => $project_id
+  );
+  /*  $form['redmine_priority_id'] = array(
+    '#type' => 'select',
+    '#title' => t('Redmine priority'),
+    '#options' => feedmine_get_list('enumerations', 'name', 'opt = "IPRI"'),
+    '#default_value' => variable_get('redmine_priority_id', 0),
+    ); */
+
+  $user_list = redmine_rest_api_users(array('limit' => '200'));
+  $user_options = array();
+  foreach ($user_list as $user) {
+    $user_options[$user->id] = $user->login;
+  }
+  array_unshift($user_options, 'Unassigned');
+  $form['redmine_assigned_to_id'] = array(
+      '#type' => 'select',
+      '#title' => t('Select Assigned To user'),
+      '#options' => $user_options,
+      '#default_value' => variable_get('redmine_assigned_to_id', 0),
+  );
+
+  $form['redmine_feedback_thankyou'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Thank you message displayed after submittal'),
+      '#default_value' => variable_get('redmine_feedback_thankyou', t('Thank you for your feedback.')),
+  );
+  return system_settings_form($form);
+}
+
+function feedmine_block($op = 'list', $delta = 0, $edit = array()) {
+  global $user;
+  switch ($op) {
+    case 'list':
+      $blocks = array();
+      //     if (variable_get('redmine_database', '')) {
+      $blocks[0]['info'] = t('Feedmine Page Feedback');
+      $blocks[1]['info'] = t('Feedmine Page Feedback (2)'); // For alternate block positions
+      $blocks[2]['info'] = t('Feedmine Page Feedback (3)');
+      $blocks[3]['info'] = t('Feedmine Page Feedback (4)');
+      //     }
+      return $blocks;
+
+    case 'view':
+      $block = NULL;
+      switch ($delta) {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+          $block['title'] = t('Page Feedback');
+          $block['content'] = feedmine_page_block();
+          break;
+      }
+      return $block;
+  }
+}
+
+function feedmine_page_block() {
+  $form = drupal_get_form('feedmine_page_form');
+  return theme('feedmine_page', $form);
+}
+
+function feedmine_page_form() {
+
+  $form['instructions1'] = array(
+      '#value' => theme('feedmine_instructions1'),
+  );
+
+  /* $form['category_id'] = array(
+    '#type' => 'select',
+    '#options' => feedmine_get_list('issue_categories', 'name', 'project_id = ' . variable_get('redmine_project_id', 1)),
+    ); */
+
+  $form['comment'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Comment'),
+      '#cols' => 18,
+      '#rows' => 2,
+      '#resizable' => FALSE,
+  );
+
+  $form['instructions2'] = array(
+      '#value' => theme('feedmine_instructions2'),
+  );
+
+  $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Send feedback'),
+  );
+
+  return $form;
+}
+
+function feedmine_page_form_validate($form, $form_state) {
+  if (!$form_state['values']['comment']) {
+    form_set_error('comment', t('Please enter a comment'));
+  }
+}
+
+
+
+function feedmine_page_form_submit($form, $form_state) {
+  $project_id = variable_get('redmine_project_id', 0);
+  // Need to have project id as a selector in the admin form
+  $status_id = "open";
+//  Including priority id gave an error for some reason. Commented it. Uses default priority ID of 4/normal
+//  $priority_id = "4";
+  $text = $form_state['values']['comment'];
+  $subject = theme('feedmine_ticket_subject', $text);
+  $description = theme('feedmine_ticket_description', $text);
+  $assigned_to_id = variable_get('redmine_assigned_to_id', 0);
+  $issue = array(
+      'subject' => $subject,
+      'project_id' => $project_id,
+      'assigned_to_id' => $assigned_to_id,
+      'status_id' => $status_id,
+      //     'priority_id' => $priority_id,
+      'text' => $text,
+      'description' => $description);
+  redmine_rest_api_issue_create($issue);
+
+  drupal_set_message(variable_get('redmine_feedback_thankyou', t('Thank you for your feedback.')));
+  return;
+}
+
+function feedmine_theme() {
+  return array(
+      'feedmine_ticket_subject' => array(
+          'arguments' => array('text' => NULL),
+      ),
+      'feedmine_ticket_description' => array(
+          'arguments' => array('text' => NULL),
+      ),
+      'feedmine_page' => array(
+          'arguments' => array('form' => NULL),
+      ),
+      'feedmine_instructions1' => array(
+          'arguments' => array(),
+      ),
+      'feedmine_instructions2' => array(
+          'arguments' => array(),
+      ),
+  );
+}
+
+function theme_feedmine_ticket_subject($text) {
+  return t('FEEDBACK: ') . drupal_substr(str_replace("\n", "", $text), 0, 40);
+}
+
+function theme_feedmine_ticket_description($text) {
+  global $user;
+  $url = $_SERVER['HTTP_REFERER'];
+  $user_agent = $_SERVER['HTTP_USER_AGENT'];
+  $host = $_SERVER['HTTP_HOST'];
+  $description = <<<TEXT
+*Page:* $url
+*User ID:* $user->uid ($host/user/$user->uid)
+*Username:* $user->name
+*Firstname:* $user->firstname
+*Lastname:* $user->lastname
+*Email:* $user->mail
+*Comment:*
+$text
+
+*Agent:* $user_agent
+TEXT;
+
+  return $description;
+}
+
+function theme_feedmine_page($form) {
+  $output = <<<OUTPUT
+  <div class="feedback">
+    $form
+  </div>
+OUTPUT;
+  return $output;
+}
+
+function theme_feedmine_instructions1() {
+  return '<div class="feedback-status">Report an issue with this page</div>';
+}
+
+function theme_feedmine_instructions2() {
+  return '';
+}

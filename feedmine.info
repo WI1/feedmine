@@ -1,0 +1,14 @@
+; $Id: feedmine.info,v 1.1.4.1 2009/05/24 19:28:35 dougkress Exp $
+name = Feedmine
+description = "Feedback engine connecting to redmine using Redmine API"
+package = "IDEA"
+version = 2.0
+core = 6.x
+dependencies[] = redmine
+
+; Information added by drupal.org packaging script on 2009-05-24
+version = "6.x-2.0"
+core = "6.x"
+project = "feedmine"
+datestamp = "1243193755"
+
