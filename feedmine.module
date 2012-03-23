@@ -50,7 +50,24 @@ function feedmine_get_list($entity, $label = 'name', $where = NULL) {
 function feedmine_settings_form() {
   $form = array();
 
-  $form['message'] = array('#value' => 'Feedmine as been configured to use Redmine API');
+  $form['redmine_api_key'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Redmine API Key to use'),
+    '#size' => 30,
+    '#maxlength' => 64,
+    '#default_value' => variable_get('redmine_api_key',''),
+    '#description' => t('<strong>Copy and paste your <em>Redmine API access key</em></strong> Click the link in the sidebar to "<em>Show</em>" the <em>API access key</em>.'),
+  );
+  
+  $form['redmine_access_point'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Redmine access point URL'),
+    '#size' => 30,
+    '#maxlength' => 64,
+    '#default_value' => variable_get('redmine_access_point',''),
+    '#description' => t('Enter the Redmine access point URL'),
+  );
+  
   $projects = redmine_rest_api_projects(array('limit' => '200'));
   $projects_options = array();
   foreach ($projects as $project) {
