@@ -21,14 +21,14 @@ function feedmine_menu() {
       'description' => 'Feedmine / redmine integration settings',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('feedmine_settings_form'),
-      'access arguments' => array('feedmine settings'),
+      'access arguments' => array('access feedmine settings'),
       'type' => MENU_NORMAL_ITEM,
   );
   return $items;
 }
 
 function feedmine_perm() {
-  return array('feedmine settings');
+  return array('access feedmine settings','submit feedback');
 }
 
 function feedmine_get_list($entity, $label = 'name', $where = NULL) {
@@ -128,8 +128,10 @@ function feedmine_block($op = 'list', $delta = 0, $edit = array()) {
         case 1:
         case 2:
         case 3:
-          $block['title'] = t('Page Feedback');
-          $block['content'] = feedmine_page_block();
+          if(user_access('submit feedback')){
+            $block['title'] = t('Page Feedback');
+            $block['content'] = feedmine_page_block();
+          }
           break;
       }
       return $block;
@@ -167,6 +169,7 @@ function feedmine_page_form() {
   $form['submit'] = array(
       '#type' => 'submit',
       '#value' => t('Send feedback'),
+      '#access' => user_access('submit feedback'),
   );
 
   return $form;
