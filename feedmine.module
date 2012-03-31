@@ -21,14 +21,14 @@ function feedmine_menu() {
       'description' => 'Feedmine / redmine integration settings',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('feedmine_settings_form'),
-      'access arguments' => array('access feedmine settings'),
+      'access arguments' => array('administer feedmine'),
       'type' => MENU_NORMAL_ITEM,
   );
   return $items;
 }
 
 function feedmine_perm() {
-  return array('access feedmine settings','submit feedback');
+  return array('administer feedmine','submit feedback');
 }
 
 function feedmine_get_list($entity, $label = 'name', $where = NULL) {
