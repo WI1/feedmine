@@ -157,9 +157,9 @@ function feedmine_page_form() {
   $form['comment'] = array(
       '#type' => 'textarea',
       '#title' => t('Comment'),
-      '#cols' => 18,
-      '#rows' => 2,
-      '#resizable' => FALSE,
+      '#cols' => "float",
+      '#rows' => 5,
+      '#resizable' => TRUE,
   );
 
   $form['instructions2'] = array(
