@@ -1,5 +1,4 @@
 <?php
-
 // $Id: feedmine.module,v 1.1.4.1 2009/05/24 19:28:35 dougkress Exp $
 
 /*
@@ -253,18 +252,43 @@ TEXT;
 }
 
 function theme_feedmine_page($form) {
+
+  
+  
   $output = <<<OUTPUT
-  <div class="feedback">
-    $form
-  </div>
+  
+  <script type="text/javascript">
+     function einblenden() {
+       document.getElementById('fbanzeigen').style.display='block';
+       document.getElementById('ausblendenButton').style.display='block';
+       document.getElementById('einblendenButton').style.display='none';
+     }
+  
+     function ausblenden() {
+       document.getElementById('fbanzeigen').style.display='none';
+       document.getElementById('ausblendenButton').style.display='none';
+       document.getElementById('einblendenButton').style.display='block';
+     }
+   </script>
+  
+ 
+     <input id="einblendenButton" class="form-submit" type="submit" onclick="einblenden()" value="Feedback-Formular anzeigen">
+     <input id="ausblendenButton" class="form-submit" type ="submit" onclick="ausblenden()" style="display: none;" value="Feedback-Formular ausblenden">
+   
+    <p>
+      <div id="fbanzeigen" style="display: none;">
+        $form
+      </div>
+    </p>
+  </fieldset>
 OUTPUT;
   return $output;
 }
 
 function theme_feedmine_instructions1() {
-  return '<div class="feedback-status">Report an issue with this page</div>';
+  return '';
 }
 
 function theme_feedmine_instructions2() {
-  return '';
+  return ''; 
 }
